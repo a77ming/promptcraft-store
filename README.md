@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PromptCraft Store
 
-## Getting Started
+精选 AI 提示词商店 - 购买高质量 AI 提示词，提升你的 AI 使用效率。
 
-First, run the development server:
+## 功能特点
+
+- 🎨 精美的响应式设计
+- 💳 PayPal 支付集成
+- 📦 6 个精心设计的提示词包
+- ⚡ 基于 Next.js 14 的快速性能
+- 🎯 购买后即时内容交付
+
+## 产品
+
+| 产品 | 描述 | 价格 |
+|------|------|------|
+| 写作大师提示词包 | 20+专业写作提示词 | $19.99 |
+| 编程高手提示词包 | 30+编程提示词 | $29.99 |
+| 营销专家提示词包 | 25+营销提示词 | $24.99 |
+| 商业策略提示词包 | 20+商业策略提示词 | $34.99 |
+| 创意设计提示词包 | 25+设计相关提示词 | $22.99 |
+| 全能大师包 | 100+提示词全收录 | $69.99 |
+
+## 本地开发
 
 ```bash
+# 安装依赖
+npm install
+
+# 创建 .env.local 文件并添加以下变量
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=your_paypal_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+PAYPAL_MODE=sandbox
+
+# 启动开发服务器
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 部署到 Vercel
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 方法一：通过 Vercel Dashboard
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. 访问 [Vercel](https://vercel.com)
+2. 点击 "New Project"
+3. 导入你的 GitHub 仓库 `a77ming/promptcraft-store`
+4. 添加环境变量：
+   - `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
+   - `PAYPAL_CLIENT_SECRET`
+   - `PAYPAL_MODE`
+5. 点击 "Deploy"
 
-## Learn More
+### 方法二：通过 CLI
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm i -g vercel
+vercel
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 环境变量
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 变量名 | 描述 | 示例 |
+|--------|------|------|
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | PayPal 客户端 ID | ARHnt3ft... |
+| `PAYPAL_CLIENT_SECRET` | PayPal 客户端密钥 | EBYWnov6... |
+| `PAYPAL_MODE` | PayPal 模式 | sandbox 或 live |
 
-## Deploy on Vercel
+## 技术栈
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Next.js 14](https://nextjs.org/) - React 框架
+- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+- [PayPal JS SDK](https://developer.paypal.com/docs/archive/javascript-sdk/) - 支付集成
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
