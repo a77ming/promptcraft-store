@@ -21,12 +21,14 @@ declare global {
           color?: string;
           shape?: string;
           label?: string;
+          height?: number;
         };
         createOrder: () => Promise<string>;
         onApprove: (data: { orderID: string }) => Promise<void>;
         onError: (err: Error) => void;
       }) => {
         render: (container: string) => void;
+        close: () => void;
       };
     };
   }
@@ -34,14 +36,16 @@ declare global {
 
 export default function PayPalButton({ product, onSuccess, onError }: PayPalButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<{ close: () => void; render: (id: string) => void } | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     // 检查Client ID
     if (!PAYPAL_CLIENT_ID) {
       setStatus('error');
-      setErrorMsg('PayPal Client ID not configured');
+      setErrorMsg('PayPal Client ID 未配置');
       return;
     }
 
@@ -56,49 +60,74 @@ export default function PayPalButton({ product, onSuccess, onError }: PayPalButt
         existingScript.addEventListener('load', () => setStatus('ready'));
         existingScript.addEventListener('error', () => {
           setStatus('error');
-          setErrorMsg('Failed to load PayPal SDK');
+          setErrorMsg('PayPal SDK 加载失败，请检查网络连接');
         });
       }
       return;
     }
 
-    // 动态加载PayPal SDK
+    // 动态加载PayPal SDK - 添加更多参数提高兼容性
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
+    // 使用更简洁的SDK参数
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture&components=buttons`;
     script.async = true;
+    script.crossOrigin = 'anonymous';
+
+    // 设置超时
+    const timeout = setTimeout(() => {
+      if (status === 'loading') {
+        setStatus('error');
+        setErrorMsg('PayPal 加载超时，请刷新页面重试');
+      }
+    }, 15000);
 
     script.onload = () => {
-      console.log('PayPal SDK loaded successfully');
-      setStatus('ready');
+      clearTimeout(timeout);
+      if (window.paypal) {
+        console.log('PayPal SDK loaded successfully');
+        setStatus('ready');
+      } else {
+        setStatus('error');
+        setErrorMsg('PayPal SDK 加载异常');
+      }
     };
 
-    script.onerror = (e) => {
-      console.error('PayPal SDK load error:', e);
+    script.onerror = () => {
+      clearTimeout(timeout);
+      console.error('PayPal SDK load error');
       setStatus('error');
-      setErrorMsg('Failed to load PayPal SDK. Please check your internet connection.');
+      setErrorMsg('PayPal SDK 加载失败，请检查网络连接或使用VPN');
     };
 
     document.body.appendChild(script);
 
     return () => {
-      // 不移除脚本，避免重复加载
+      clearTimeout(timeout);
     };
-  }, []);
+  }, [retryCount, status]);
 
   useEffect(() => {
     if (status !== 'ready' || !window.paypal || !containerRef.current) return;
 
-    // 清空容器
+    // 清空容器并关闭旧按钮
+    if (buttonsRef.current) {
+      try {
+        buttonsRef.current.close();
+      } catch (e) {
+        // ignore
+      }
+    }
     containerRef.current.innerHTML = '';
 
     try {
-      window.paypal.Buttons({
+      buttonsRef.current = window.paypal.Buttons({
         style: {
           layout: 'vertical',
-          color: 'blue',
+          color: 'gold',
           shape: 'rect',
           label: 'paypal',
+          height: 50,
         },
         createOrder: async () => {
           try {
@@ -114,7 +143,7 @@ export default function PayPalButton({ product, onSuccess, onError }: PayPalButt
 
             if (!response.ok) {
               const errData = await response.json();
-              throw new Error(errData.error || 'Failed to create order');
+              throw new Error(errData.error || '创建订单失败');
             }
 
             const order = await response.json();
@@ -138,7 +167,7 @@ export default function PayPalButton({ product, onSuccess, onError }: PayPalButt
 
             if (!response.ok) {
               const errData = await response.json();
-              throw new Error(errData.error || 'Failed to capture payment');
+              throw new Error(errData.error || '支付确认失败');
             }
 
             const result = await response.json();
@@ -152,25 +181,46 @@ export default function PayPalButton({ product, onSuccess, onError }: PayPalButt
           console.error('PayPal button error:', err);
           onError(err as Error);
         },
-      }).render(`#paypal-button-container-${product.id}`);
+      });
+
+      buttonsRef.current.render(`#paypal-button-container-${product.id}`);
     } catch (err) {
       console.error('Render PayPal buttons error:', err);
       setStatus('error');
-      setErrorMsg('Failed to render PayPal buttons');
+      setErrorMsg('PayPal 按钮渲染失败');
     }
   }, [status, product, onSuccess, onError]);
 
+  const handleRetry = () => {
+    setStatus('loading');
+    setErrorMsg('');
+    setRetryCount(c => c + 1);
+  };
+
   if (status === 'error') {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600 font-medium">支付加载失败</p>
-        <p className="text-red-500 text-sm mt-1">{errorMsg}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-3 text-sm text-red-600 underline"
-        >
-          刷新页面重试
-        </button>
+      <div className="space-y-4">
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 font-medium">支付加载失败</p>
+          <p className="text-red-500 text-sm mt-1">{errorMsg}</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={handleRetry}
+            className="flex-1 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors"
+          >
+            重试
+          </button>
+          <a
+            href={`mailto:support@promptcraft.store?subject=购买 ${product.name}&body=我想购买 ${product.name}，价格 $${product.price}`}
+            className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center"
+          >
+            联系客服购买
+          </a>
+        </div>
+        <p className="text-xs text-gray-500 text-center">
+          如遇支付问题，请尝试使用VPN或联系客服
+        </p>
       </div>
     );
   }
